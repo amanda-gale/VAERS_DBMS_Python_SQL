@@ -1,4 +1,4 @@
-.env
+../.env
 R_to_python.txt
 data/
 .idea

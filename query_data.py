@@ -4,7 +4,6 @@ from sqlalchemy import create_engine
 from dotenv import load_dotenv
 
 load_dotenv()
-
 engine = create_engine(os.environ['VAERS_DATABASE_URL'])
 
 def get_top_symptoms(year, limit=20):
