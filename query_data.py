@@ -1,14 +1,14 @@
 import os
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
 load_dotenv()
 engine = create_engine(os.environ['VAERS_DATABASE_URL'])
 
 def get_top_symptoms(year, limit=20):
-    vintage = f"symptoms_{str(year)}"
-    query = f"""
+    vintage = f"symptoms_{int(year)}"
+    query = text(f"""
         SELECT symptom, COUNT(*) AS reports
         FROM (
             SELECT "SYMPTOM1" AS symptom FROM {vintage}
@@ -25,7 +25,6 @@ def get_top_symptoms(year, limit=20):
         AND symptom NOT LIKE '%No adverse event%'
         GROUP BY symptom
         ORDER BY reports DESC
-        LIMIT %(limit)s;
-    """
-    return pd.read_sql(query, engine, params={"limit": limit})
-
+        LIMIT {int(limit)};
+    """)
+    return pd.read_sql(query, engine)
