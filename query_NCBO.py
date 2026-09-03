@@ -7,7 +7,11 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
-engine = create_engine(os.getenv("VAERS_DATABASE_URL"))
+engine = create_engine(
+    os.getenv("VAERS_DATABASE_URL"),
+    pool_pre_ping=True,   # the API loop runs for hours; pooled connections go stale
+    pool_recycle=1800,
+)
 
 # --- NCBO BioPortal config ---
 # Free API key from: https://bioportal.bioontology.org/account
@@ -18,7 +22,7 @@ HEADERS = {"Authorization": f"apikey token={BIOPORTAL_API_KEY}"}
 
 def get_unique_symptoms(year: int) -> list[str]:
     """Pull all unique symptom terms from a given year's symptoms table."""
-    query = f"""
+    query = """
     SELECT DISTINCT symptom FROM (
                 SELECT "SYMPTOM1" AS symptom FROM symptoms_%(year)s
                 UNION ALL
@@ -48,7 +52,7 @@ def lookup_soc(symptom_term: str) -> dict:
         "ontologies": "MEDDRA",
 
         "exact_match": "true",  # PT terms in VAERS are already standardized
-        "include": "prefLabel,ancestors",
+        "include": "prefLabel",
     }
 
     try:
@@ -125,6 +129,7 @@ def build_lookup_table(year: int, delay: float = 0.5):
     """
     print(f"Fetching unique symptoms for {year}...")
     symptoms = get_unique_symptoms(year)
+    #symptoms = symptoms[:10]
     print(f"Found {len(symptoms)} unique symptom terms.")
 
     results = []
@@ -135,8 +140,18 @@ def build_lookup_table(year: int, delay: float = 0.5):
         time.sleep(delay)  # Rate limiting — BioPortal is a shared public resource
 
     df = pd.DataFrame(results)
+
+    # Checkpoint to disk first — the API loop above is too expensive to redo
+    # if the database write fails.
+    csv_path = os.path.join(os.path.dirname(__file__), f"symptom_soc_lookup_{year}.csv")
+    df.to_csv(csv_path, index=False)
+    print(f"Checkpointed {len(df)} rows to {csv_path}")
+
     print(f"\nResults summary:")
     print(df["soc"].value_counts())
+    # What field is 'soc' coming from?
+    print(df.filter(like='soc').columns.tolist())
+    print(df['soc_symptom1'].value_counts().head(20))
 
     # Write to PostgreSQL
     df.to_sql("symptom_soc_lookup", engine, if_exists="replace", index=False)
@@ -145,5 +160,5 @@ def build_lookup_table(year: int, delay: float = 0.5):
 
 
 if __name__ == "__main__":
-    #build_lookup_table(year=2026)
-    print(get_unique_symptoms(year=2026))
+    build_lookup_table(year=2026)
+    #print(get_unique_symptoms(2026))

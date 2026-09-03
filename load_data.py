@@ -31,3 +31,4 @@ df_symptoms.to_sql(f'symptoms_{year}', engine, if_exists='replace', index=False)
 df_vax.to_sql(f'vax_{year}', engine, if_exists='replace', index=False)
 
 print(f"Database populated with VAERs vaccine side effects report data from year {year}.")
+
