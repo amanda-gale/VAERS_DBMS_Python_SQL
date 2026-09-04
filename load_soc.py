@@ -16,7 +16,7 @@ def encode_soc_symptoms(year: int):
     query = text(f"""
     SELECT
     s."VAERS_ID",
-    l1.soc AS soc_symtpom1,
+    l1.soc AS soc_symptom1,
     l2.soc AS soc_symptom2,
     l3.soc AS soc_symptom3,
     l4.soc AS soc_symptom4,
