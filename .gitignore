@@ -4,3 +4,4 @@ data/
 .idea
 CLAUDE.md
 __pycache__
+*.csv
