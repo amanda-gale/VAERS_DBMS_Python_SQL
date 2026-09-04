@@ -122,43 +122,82 @@ def get_soc_from_ancestors(class_id: str) -> str:
 def build_lookup_table(year: int, delay: float = 0.5):
     """
     Main function: fetch all unique symptoms for a year,
-    look up each one's SOC, and write the results to a
-    'symptom_soc_lookup' table in PostgreSQL.
+    look up each one's SOC, and saves results as a csv.
 
     delay: seconds to wait between API calls (be a good citizen)
     """
-    print(f"Fetching unique symptoms for {year}...")
-    symptoms = get_unique_symptoms(year)
-    #symptoms = symptoms[:10]
-    print(f"Found {len(symptoms)} unique symptom terms.")
 
-    results = []
-    for i, symptom in enumerate(symptoms):
-        print(f"  [{i + 1}/{len(symptoms)}] Looking up: {symptom}")
-        result = lookup_soc(symptom)
-        results.append(result)
-        time.sleep(delay)  # Rate limiting — BioPortal is a shared public resource
+    if os.path.isfile(f"symptom_soc_lookup_{year}.csv"):
+        df = pd.read_csv(f"symptom_soc_lookup_{year}.csv")
+    else:
+        print(f"Fetching unique symptoms for {year}...")
+        symptoms = get_unique_symptoms(year)
+        #symptoms = symptoms[:10]
+        print(f"Found {len(symptoms)} unique symptom terms.")
 
-    df = pd.DataFrame(results)
+        results = []
+        for i, symptom in enumerate(symptoms):
+            print(f"  [{i + 1}/{len(symptoms)}] Looking up: {symptom}")
+            result = lookup_soc(symptom)
+            results.append(result)
+            time.sleep(delay)  # Rate limiting — BioPortal is a shared public resource
 
-    # Checkpoint to disk first — the API loop above is too expensive to redo
-    # if the database write fails.
-    csv_path = os.path.join(os.path.dirname(__file__), f"symptom_soc_lookup_{year}.csv")
-    df.to_csv(csv_path, index=False)
-    print(f"Checkpointed {len(df)} rows to {csv_path}")
+        df = pd.DataFrame(results)
 
-    print(f"\nResults summary:")
-    print(df["soc"].value_counts())
-    # What field is 'soc' coming from?
-    print(df.filter(like='soc').columns.tolist())
-    print(df['soc_symptom1'].value_counts().head(20))
+        # Checkpoint to disk first — the API loop above is too expensive to redo
+        # if the database write fails.
+        csv_path = os.path.join(os.path.dirname(__file__), f"symptom_soc_lookup_{year}.csv")
+        df.to_csv(csv_path, index=False)
+        print(f"Checkpointed {len(df)} rows to {csv_path}")
 
-    # Write to PostgreSQL
-    df.to_sql("symptom_soc_lookup", engine, if_exists="replace", index=False)
-    print("\nLookup table written to PostgreSQL as 'symptom_soc_lookup'.")
+    # compile all symptom
+    print(f"Number of unique symptoms for {year}: {len(df)}")
+    compile_tables(df)
+
+    # write table to neon
+    upload_csv_to_neon()
+
+    # print(f"\nResults summary:")
+    # print(df["soc"].value_counts())
+
     return df
 
 
+def compile_tables(df: pd.DataFrame):
+    """
+    Compiles all symptoms tables.
+    """
+
+    file_path = "symptom_soc_lookup.csv"
+
+    if not os.path.exists(file_path):
+        # File doesn't exist yet — just write the new data
+        df.to_csv(file_path, index=False)
+    else:
+        # File exists — load it, combine, deduplicate, save
+        existing = pd.read_csv(file_path)
+        combined = pd.concat([existing, df]).drop_duplicates(subset="symptom")
+        combined.to_csv(file_path, index=False)
+        print(f"Number of unique symptoms for all years: {len(combined)}")
+
+    print(f"Added data from year {year} to master table.")
+
+
+def upload_csv_to_neon():
+    """
+    Uploads the complete soc lookup table to neon.
+    """
+    data = pd.read_csv("symptom_soc_lookup.csv")
+    data.to_sql(f"symptom_soc_lookup", engine, if_exists="replace", index=False)
+    print("\nLookup table written to PostgreSQL as 'symptom_soc_lookup'.")
+
+
 if __name__ == "__main__":
-    build_lookup_table(year=2026)
-    #print(get_unique_symptoms(2026))
+
+    years = [2025, 2026]
+
+    # build the soc symptom table by year
+    for year in years:
+        print(f"\nStarting year {year}...")
+        build_lookup_table(year)
+
