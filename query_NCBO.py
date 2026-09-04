@@ -1,4 +1,6 @@
-import numpy as np
+"""This script gathers all distinct symptoms from the symptoms tables and retrieves their soc categories using MedDRA
+codes, mapping each unique symptom to a category. This data is used to build a lookup table which is saved to Neon."""
+
 import requests
 import time
 import pandas as pd

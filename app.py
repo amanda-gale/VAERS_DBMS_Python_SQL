@@ -1,3 +1,9 @@
+"""This script runs all queries of the VAERS data and uses it to launch the Streamlit app."""
+
+import streamlit as st
+
+st.title("VAERS DBMS Python App")
+
 import streamlit as st
 from query_data import get_top_symptoms
 

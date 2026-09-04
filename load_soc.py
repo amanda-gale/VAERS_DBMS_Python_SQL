@@ -1,3 +1,5 @@
+"""This script handles categorizing the raw symptoms data by its soc categories and saving the data to neon."""
+
 import os
 import pandas as pd
 from dotenv import load_dotenv
@@ -6,8 +8,6 @@ from sqlalchemy import create_engine, text
 load_dotenv()
 engine = create_engine(os.environ['VAERS_DATABASE_URL'])
 
-# add soc columns to symptoms table
-years = [2025]
 
 def encode_soc_symptoms(year: int):
     # make new table called soc_symptoms_year
@@ -30,10 +30,21 @@ def encode_soc_symptoms(year: int):
     """)
 
     df = pd.read_sql(query, engine)
-    print(df.iloc[0:20,1])
-
+    print(df.head(10))
+    print(f"Symptoms encoded from year {year}.")
+    store_encoded_table(df, year)
     return df
 
-#print(list(encode_soc_symptoms(y).head() for y in years))
-encode_soc_symptoms(2026)
+
+def store_encoded_table(df, year):
+
+    df.to_sql(f"soc_symptoms_{year}", engine, if_exists="replace", index=False)
+    print("Table saved to Neon.")
+
+
+if __name__ == "__main__":
+    years = [2026]
+    #print(list(encode_soc_symptoms(y).head() for y in years))
+    for year in years:
+        encode_soc_symptoms(year)
 

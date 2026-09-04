@@ -1,3 +1,5 @@
+"""This script contains the queries used to build the streamlit dashboard interactive website."""
+
 import os
 import pandas as pd
 from sqlalchemy import create_engine, text

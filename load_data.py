@@ -1,3 +1,5 @@
+"""This script loads the raw VAERS data from a csv file into the Neon PostgreSQL database."""
+
 from dotenv import load_dotenv
 import os
 import pandas as pd
