@@ -57,3 +57,25 @@ def get_top_categories(year, limit=20):
     return pd.read_sql(query, engine)
 
 
+# most common symptom for each category
+# most common category for each vaccine type
+
+# vaccine type with the most deaths associated with it
+def vax_deaths(year, limit=20):
+    query = text(f"""
+    SELECT "VAX_TYPE", COUNT(*) as reports
+    FROM vax_{year} v 
+    LEFT JOIN data_{year} d 
+    ON v."VAERS_ID" = d."VAERS_ID"
+    WHERE "DIED" = 'Y'
+    GROUP BY "VAX_TYPE"
+    ORDER BY reports DESC
+    LIMIT {int(limit)};
+    """)
+    return pd.read_sql(query, engine)
+
+
+# vaccine type with the most adverse events associated with it
+# most common adverse event amongst males vs females
+# occurrence of adverse events by age group
+

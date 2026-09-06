@@ -1,7 +1,7 @@
 """This script runs all queries of the VAERS data and uses it to launch the Streamlit app."""
 
 import streamlit as st
-from query_data import get_top_symptoms, get_top_categories
+from query_data import get_top_symptoms, get_top_categories, vax_deaths
 
 st.title("VAERS DBMS Python App")
 
@@ -23,3 +23,7 @@ st.header("Top Symptom Categories")
 df = get_top_categories(year=year, limit=20)
 st.bar_chart(df.set_index("soc_category"))
 
+# vaccine manufacturer responsible for the most deaths
+st.header("Manufacturer Death Counts")
+df = vax_deaths(year=year, limit=20)
+st.bar_chart(df.set_index("VAX_TYPE"))
